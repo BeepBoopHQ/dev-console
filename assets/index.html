@@ -1,0 +1,233 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Beep Boop Developer Console</title>
+  <link href="/css" rel="stylesheet">
+  <script src="/jq"></script>
+  <script src="/frm2js"></script>
+  <style>
+    body {
+      margin:15px;
+      font-size: .75em
+    }
+
+    input {
+      width:100%
+    }
+    .cfg-key-input {
+      width:25%;
+      padding-bottom: 5px
+    }
+    .cfg-val-input {
+      width:60%;
+      padding-bottom: 5px
+    }
+    .cfg-item-container {
+      padding-bottom: 5px
+    }
+    .bot-row {}
+    .new-bot-row {
+      background-color: #CEF6CE;
+    }
+    .remove {
+      background-color: #F6CECE
+    }
+    td {
+      padding-top: 10px !important;
+      vertical-align: top
+    }
+    .bp-img {
+      position: absolute; top: 10px; right: 15px; height: 57px; width: 57px
+    }
+  </style>
+</head>
+
+<body>
+  <img src="data:image/png;base64,{{.Logo}}" class="bp-img">
+  <h3>Beep Boop Developer Console</h3>
+  <p style="padding-bottom: 5px; margin-right:70px">
+    Simulate a Beep Boop "Resources" server to test multi-team bots.
+    Each row below represents a team-specific bot running in your single bot process. The beepboop client will manage starting/stopping bots based on changes you make below.
+  </p>
+
+  <form id="frm" class="pure-form">
+  <table width="100%" class="pure-table pure-table-horizontal">
+    <col width="20%"><col width="60%"><col width="20%">
+    <thead>
+      <tr>
+        <th>BeepBoopID</th>
+        <th>Config</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  </form>
+
+  <script>
+    'use strict'
+
+    // var botResources = $.parseJSON({{.Data}})
+    var botResources = {} // TODO persist data between refresh
+    rowsTmpl()
+
+    function rowsTmpl() {
+      $('#rows').append('<tr class="new-bot-row">' + newRowCellsTmpl() + '</tr>' +
+        '<tr id="curr-bot-heading"><td colspan="3">Current Bot Resources</td></tr>')
+
+      if (botResources.length > 0) {
+        botResources.forEach(function(data, i) {
+          var rowTmpl = botRowTmpl(data, i)
+          $( '#rows' ).append(rowTmpl)
+        })
+      }
+    }
+
+    function newRowCellsTmpl() {
+      var randy = Math.random().toString(36).substring(7)
+      return (
+        '<td><input type="text" name="ID" placeholder="resourceID" value="' + randy + '" disabled="disabled"></td>' +
+        '<td id="cfg-outer">' + cfgInputsTmpl() + '</td>' +
+        '<td><a id="add" class="pure-button">add</a></td>'
+      )
+    }
+
+    function botRowTmpl(data, i) {
+      var botIDTmpl = '<td><input type="text" name="ID" value="' + data.resourceID + '" disabled="disabled"></td>'
+      var configsTmpl = '<td id="cfg-outer">'
+      for (var cfg in data.resource) {
+        configsTmpl += '<div class="cfg-item-container">' +
+            '<input data-type="key" class="cfg-key-input" type="text" value="' + cfg + '">&nbsp;' +
+            '<input data-type="val" class="cfg-val-input" type="text" value="' + data.resource[cfg] + '">' +
+          '</div>'
+      }
+      configsTmpl += '</div><a id="add-cfg-btn" class="pure-button">+</a></td>'
+
+      var btnTmpl = '<td><a class="pure-button update" data-id="'+ data.resourceID + '">update</a>&nbsp;' +
+      '<a class="pure-button remove" id="'+ data.resourceID +'">remove</a></td>'
+
+      return (
+        '<tr class="bot-row">' +
+          botIDTmpl +
+          configsTmpl +
+          btnTmpl +
+        '</tr>'
+      )
+    }
+
+    function cfgInputsTmpl() {
+      return (
+        '<div class="cfg-item-container">' +
+          '<input data-type="key" class="cfg-key-input" type="text" placeholder="Config Key">&nbsp;' +
+          '<input data-type="val" class="cfg-val-input" type="text" placeholder="Config Value">' +
+        '</div><a id="add-cfg-btn" class="pure-button">+</a>'
+      )
+    }
+
+    // add bot resource
+    $(document).on( "click", "#add", function() {
+      var newbotRow = this.closest('.new-bot-row')
+      add(newbotRow)
+    })
+    $('#rows').on('keyup', function(e) {
+      if (event.keyCode == 13) {
+        if (e.target.className === 'cfg-val-input') {
+          var newbotRow = e.target.closest('.new-bot-row')
+          add(newbotRow)
+        }
+      }
+    });
+
+    function add(botResRow) {
+      var frmData = form2js(botResRow, '.', true, cfgKvConverter, true, true)
+
+      console.log(JSON.stringify(frmData))
+
+      $.ajax({
+        url: 'http://localhost:{{.Port}}/api/resource',
+        method: 'POST',
+        data: JSON.stringify(frmData),
+        dataType: 'text'
+      })
+      .done(function() {
+          var rw = botRowTmpl(frmData, $('.bot-row').length)
+          $('.new-bot-row').replaceWith('<tr class="new-bot-row">' + newRowCellsTmpl() + '</tr>')
+          $('#curr-bot-heading').after(rw)
+          $('.new-bot-row .cfg-key-input').focus()
+        })
+      .fail(function() {
+          console.log( 'error' + JSON.stringify(this) );
+        })
+    }
+
+    // update bot resource
+    $(document).on( "click", ".update", function() {
+      var botResRow = this.closest('.bot-row');
+      var frmData = form2js(botResRow, '.', true, cfgKvConverter, true, true)
+
+      $.ajax({
+        url: 'http://localhost:{{.Port}}/api/resource',
+        method: 'PATCH',
+        data: JSON.stringify(frmData),
+        dataType: 'text'
+      })
+      .fail(function() {
+        console.log('error' + JSON.stringify(this));
+      })
+    })
+
+    // remove bot resource
+    $( document ).on('click', '.remove', function() {
+      var rmBtn = this;
+
+      $.ajax({
+        url: 'http://localhost:{{.Port}}/api/resource',
+        method: 'DELETE',
+        data: JSON.stringify({'resourceID': rmBtn.id}),
+        dataType: 'text'
+      })
+      .done(function() {
+        $(rmBtn).closest('.bot-row').remove()
+      })
+      .fail(function() {
+        console.log( 'error' )
+      })
+    })
+
+    // add config item to bot resource
+    $(document).on( "click", "#add-cfg-btn", function() {
+      $(this).hide()
+      $(this).closest('#cfg-outer').append(cfgInputsTmpl())
+    });
+
+    // used by form2js to handle converting config key-value fields into an object
+    function cfgKvConverter(node) {
+      var nodeType = $(node).data('type')
+
+      // if it's the key, construct the key-values
+      if (nodeType === 'key') {
+        var key = 'resource.' + $(node).val()
+        var val = $(node).next('.cfg-val-input').val()
+
+        return {name: key, value: val}
+
+      // if it's the value input, ignore it
+      } else if (nodeType === 'val') {
+        return {}
+      }
+    }
+
+    // test code
+    // var ws = new WebSocket("ws://localhost:9000/ws");
+    // ws.onmessage = function (event) {
+    //   console.log("ws: " + JSON.stringify(JSON.parse(event.data)));
+    // }
+    //
+    // ws.onopen = function (event) {
+    //   ws.send('{"type": "auth_request"}')
+    // }
+  </script>
+</body>
+</html>
