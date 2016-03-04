@@ -15,13 +15,8 @@ import (
 )
 
 type ConsolePostMessage struct {
-	ResourceID string
+	ResourceID string `json:"resourceID"`
 	Resource
-}
-
-type ResourceWrapper struct {
-	ResourceID string
-	Resource   map[string]string
 }
 
 type BotResourceRegistry struct {
@@ -60,8 +55,7 @@ func (brr *BotResourceRegistry) Remove(msg *RemoveResourceMessage) {
 }
 
 func listen(wsConn *websocket.Conn) {
-	// defer wsConn.Close()
-	wsConn.Close()
+	defer wsConn.Close()
 
 	for {
 		_, b, err := wsConn.ReadMessage()
@@ -92,6 +86,8 @@ func listen(wsConn *websocket.Conn) {
 					wsConn.WriteJSON(newAddRes)
 				}
 			}
+		} else {
+			fmt.Printf("Invalid message received: %s\n", string(b))
 		}
 	}
 }
@@ -116,7 +112,7 @@ func apiResourceHandler2(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case "POST":
-		addResMsg := NewAddResourceMessage(postMsg.Resource.ID, &postMsg.Resource)
+		addResMsg := NewAddResourceMessage(postMsg.ResourceID, &postMsg.Resource)
 		registry.Add(addResMsg)
 
 		if wsConn != nil {
@@ -128,7 +124,7 @@ func apiResourceHandler2(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 
 	case "PATCH":
-		updateResMsg := NewUpdateResourceMessage(postMsg.Resource.ID, &postMsg.Resource)
+		updateResMsg := NewUpdateResourceMessage(postMsg.ResourceID, &postMsg.Resource)
 		registry.Update(updateResMsg)
 
 		if wsConn != nil {
@@ -139,7 +135,7 @@ func apiResourceHandler2(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(""))
 
 	case "DELETE":
-		removeResMsg := NewRemoveResourceMessage(postMsg.Resource.ID)
+		removeResMsg := NewRemoveResourceMessage(postMsg.ResourceID)
 		registry.Remove(removeResMsg)
 
 		if wsConn != nil {

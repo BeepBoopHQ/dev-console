@@ -88,14 +88,15 @@
     function newRowCellsTmpl() {
       var randy = Math.random().toString(36).substring(7)
       return (
-        '<td><input type="text" name="ID" placeholder="resourceID" value="' + randy + '" disabled="disabled"></td>' +
+        '<td><input type="text" name="resourceID" placeholder="resourceID" value="' + randy + '" disabled="disabled"></td>' +
         '<td id="cfg-outer">' + cfgInputsTmpl() + '</td>' +
         '<td><a id="add" class="pure-button">add</a></td>'
       )
     }
 
     function botRowTmpl(data, i) {
-      var botIDTmpl = '<td><input type="text" name="ID" value="' + data.resourceID + '" disabled="disabled"></td>'
+      console.log(data)
+      var botIDTmpl = '<td><input type="text" name="resourceID" value="' + data.resourceID + '" disabled="disabled"></td>'
       var configsTmpl = '<td id="cfg-outer">'
       for (var cfg in data.resource) {
         configsTmpl += '<div class="cfg-item-container">' +
