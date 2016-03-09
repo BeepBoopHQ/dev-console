@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -28,4 +30,41 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Client connected: %s\n", wsConn.RemoteAddr().String())
 	listen(wsConn)
+}
+
+func listen(wsConn *websocket.Conn) {
+	defer wsConn.Close()
+
+	for {
+		_, b, err := wsConn.ReadMessage()
+		if err != nil {
+			if err != io.EOF {
+				log.Println("NextReader:", err)
+			}
+			return
+		}
+
+		var f interface{}
+		err = json.Unmarshal(b, &f)
+		if err != nil {
+			log.Printf("err: %s", err.Error())
+		}
+
+		msgMap := f.(map[string]interface{})
+		if val, ok := msgMap["type"]; ok {
+			if val == "auth" {
+				wsConn.WriteJSON(NewAuthResultMessage(true, ""))
+
+				// new connection, successfully auth'd, send all resources
+				for _, botRes := range registry.BotResources {
+					newAddRes := NewAddResourceMessage(idGen(), &Resource{
+						ResourceCfg: botRes.ResourceCfg,
+					})
+					wsConn.WriteJSON(newAddRes)
+				}
+			}
+		} else {
+			fmt.Printf("Invalid message received: %s\n", string(b))
+		}
+	}
 }

@@ -7,10 +7,10 @@ import (
 )
 
 type Resource struct {
-	ID          string
+	ID          string `json:"resourceID"`
 	UserID      string
 	PrototypeID string
-	Resource    map[string]string
+	ResourceCfg map[string]string `json:"resource"`
 	Time        time.Time
 }
 
@@ -95,7 +95,7 @@ func NewAddResourceMessage(resourceID string, resource *Resource) *AddResourceMe
 	return &AddResourceMessage{
 		MessageMeta: *NewMessageMeta(AddResourceMessageType),
 		ResourceID:  resourceID,
-		Resource:    resource.Resource,
+		Resource:    resource.ResourceCfg,
 	}
 }
 
@@ -112,7 +112,7 @@ func NewUpdateResourceMessage(resourceID string, resource *Resource) *UpdateReso
 	return &UpdateResourceMessage{
 		MessageMeta: *NewMessageMeta(UpdateResourceMessageType),
 		ResourceID:  resourceID,
-		Resource:    resource.Resource,
+		Resource:    resource.ResourceCfg,
 	}
 }
 

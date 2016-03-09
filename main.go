@@ -18,7 +18,7 @@ func main() {
 	flag.Parse()
 
 	http.HandleFunc("/ws", wsHandler)
-	http.HandleFunc("/api/resource", apiResourceHandler2)
+	http.HandleFunc("/api/resource", apiResourceHandler)
 	http.HandleFunc("/css", cssHandler)
 	http.HandleFunc("/jq", jQueryHandler)
 	http.HandleFunc("/frm2js", frm2jsHandler)

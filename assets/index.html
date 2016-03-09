@@ -69,8 +69,12 @@
   <script>
     'use strict'
 
-    // var botResources = $.parseJSON({{.Data}})
-    var botResources = {} // TODO persist data between refresh
+    var botResources = {}
+    try {
+      botResources = $.parseJSON({{.Data}}) || {}
+    } catch (e) {
+      console.log(e)
+    }
     rowsTmpl()
 
     function rowsTmpl() {
@@ -95,7 +99,6 @@
     }
 
     function botRowTmpl(data, i) {
-      console.log(data)
       var botIDTmpl = '<td><input type="text" name="resourceID" value="' + data.resourceID + '" disabled="disabled"></td>'
       var configsTmpl = '<td id="cfg-outer">'
       for (var cfg in data.resource) {
@@ -143,9 +146,6 @@
 
     function add(botResRow) {
       var frmData = form2js(botResRow, '.', true, cfgKvConverter, true, true)
-
-      console.log(JSON.stringify(frmData))
-
       $.ajax({
         url: 'http://localhost:{{.Port}}/api/resource',
         method: 'POST',
